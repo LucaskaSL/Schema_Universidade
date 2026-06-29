@@ -7,7 +7,5 @@ public enum tipo_turno
     Matutino,
     Vespertino,
     Noturno,
-    
-    [PgName("Turno Indefinido")]
     TurnoIndefinido
 }

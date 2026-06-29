@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Universidade.Entities;
+using Universidade.Models.Enums;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Universidade.Data;
 
@@ -47,18 +49,24 @@ public partial class MeusEstudosContext : DbContext
     public virtual DbSet<Vinculo> Vinculos { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=meus_estudos;Username=admin;Password=senhasecreta");
+    {
+        if (!optionsBuilder.IsConfigured)
+            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=meus_estudos;Username=admin;Password=senhasecreta");
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder
-            .HasPostgresEnum("universidade", "status_estudante", new[] { "Ativo", "Cancelada", "Formando", "Graduado" })
-            .HasPostgresEnum("universidade", "tipo_formacao", new[] { "Graduação", "Especialização", "Mestrado", "Doutorado" })
-            .HasPostgresEnum("universidade", "tipo_grau", new[] { "Bacharelado", "Licenciatura Plena" })
-            .HasPostgresEnum("universidade", "tipo_jornada", new[] { "20h", "40h", "DE" })
-            .HasPostgresEnum("universidade", "tipo_nivel", new[] { "Graduação", "Mestrado", "Doutorado", "Lato" })
-            .HasPostgresEnum("universidade", "tipo_turno", new[] { "Matutino", "Vespertino", "Noturno", "Turno Indefinido" });
+        // Conversores para os enums que possuem espaço
+        var grauConverter = new ValueConverter<tipo_grau, string>(
+               v => v == tipo_grau.LicenciaturaPlena ? "Licenciatura Plena" : v.ToString(),
+               v => v == "Licenciatura Plena" ? tipo_grau.LicenciaturaPlena : Enum.Parse<tipo_grau>(v)
+           );
 
+           var turnoConverter = new ValueConverter<tipo_turno, string>(
+               v => v == tipo_turno.TurnoIndefinido ? "Turno Indefinido" : v.ToString(),
+               v => v == "Turno Indefinido" ? tipo_turno.TurnoIndefinido : Enum.Parse<tipo_turno>(v)
+           );
+        
         modelBuilder.Entity<Alocacao>(entity =>
         {
             entity.HasKey(e => new { e.IdTurma, e.IdHorario }).HasName("pk_alocacao");
@@ -98,16 +106,18 @@ public partial class MeusEstudosContext : DbContext
             entity.HasIndex(e => new { e.Nome, e.TipoTurno, e.Campus, e.TipoNivel });
                 
             entity.HasKey(e => e.Idcurso).HasName("curso_pkey");
-
             entity.ToTable("curso", "universidade");
 
-            entity.Property(e => e.Idcurso).HasColumnName("idcurso");
-            entity.Property(e => e.Campus)
-                .HasMaxLength(100)
-                .HasColumnName("campus");
-            entity.Property(e => e.Nome)
-                .HasMaxLength(100)
-                .HasColumnName("nome");
+            entity.Property(e => e.Idcurso)
+                .HasColumnName("idcurso")
+                .ValueGeneratedOnAdd(); // Importante para respeitar o id SERIAL no SQL
+            
+            entity.Property(e => e.Campus).HasMaxLength(100).HasColumnName("campus");
+            entity.Property(e => e.Nome).HasMaxLength(100).HasColumnName("nome");
+
+            entity.Property(e => e.TipoGrau).HasConversion(grauConverter).HasColumnName("grau"); // Momento da conversão
+            entity.Property(e => e.TipoTurno).HasConversion(turnoConverter).HasColumnName("turno"); // Momento da conversão
+            entity.Property(e => e.TipoNivel).HasConversion<string>().HasColumnName("nivel");
         });
 
         modelBuilder.Entity<Departamento>(entity =>
