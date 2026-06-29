@@ -394,13 +394,20 @@ public partial class MeusEstudosContext : DbContext
 
             entity.ToTable("vinculo", "universidade");
 
-            entity.Property(e => e.Idvinculo).HasColumnName("idvinculo");
+            entity.Property(e => e.Idvinculo)
+                .HasColumnName("idvinculo")
+                .ValueGeneratedOnAdd(); // Importante para respeitar o id SERIAL no SQL
+            
             entity.Property(e => e.Curso).HasColumnName("curso");
             entity.Property(e => e.DataEntrada).HasColumnName("data_entrada");
             entity.Property(e => e.DataSaida).HasColumnName("data_saida");
             entity.Property(e => e.MatEstudante)
                 .HasMaxLength(7)
                 .HasColumnName("mat_estudante");
+            
+            entity.Property(e => e.StatusEstudante)
+                .HasConversion<string>()
+                .HasColumnName("status");
 
             entity.HasOne(d => d.CursoNavigation).WithMany(p => p.Vinculos)
                 .HasForeignKey(d => d.Curso)
