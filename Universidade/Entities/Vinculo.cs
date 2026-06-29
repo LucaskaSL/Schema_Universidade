@@ -18,5 +18,5 @@ public partial class Vinculo
 
     public virtual Estudante? MatEstudanteNavigation { get; set; }
     
-    public status_estudante? StatusEstudanteNavigation { get; set; }
+    public status_estudante? StatusEstudante { get; set; }
 }
