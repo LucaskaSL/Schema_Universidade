@@ -13,23 +13,17 @@ builder.Services.AddFastEndpoints()
 
 builder.Services.AddAuthorization();
 
-// Configuração dos enums no postgres para o C#
-var dataSourceBuilder = new NpgsqlDataSourceBuilder(builder.Configuration.GetConnectionString("universidadedb"));
-dataSourceBuilder.MapEnum<status_estudante>("universidade.status_estudante");
-dataSourceBuilder.MapEnum<tipo_formacao>("universidade.tipo_formacao");
-dataSourceBuilder.MapEnum<tipo_grau>("universidade.tipo_grau");
-dataSourceBuilder.MapEnum<tipo_jornada>("universidade.tipo_jornada");
-dataSourceBuilder.MapEnum<tipo_nivel>("universidade.tipo_nivel");
-dataSourceBuilder.MapEnum<tipo_turno>("universidade.tipo_turno");
-var universidadedb = dataSourceBuilder.Build();
-
+// Conexão com o banco de dados
 builder.Services.AddDbContext<MeusEstudosContext>(options =>
-    options.UseNpgsql(universidadedb)); 
+    options.UseNpgsql(builder.Configuration.GetConnectionString("universidadedb")));
 
 var app = builder.Build();
 
 app.UseAuthorization();
-app.UseFastEndpoints();
+app.UseFastEndpoints(c => {
+    // API lê e responde Enums como textos ao invés de números
+    c.Serializer.Options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
 
 //Uso do Swagger
 if (app.Environment.IsDevelopment())
